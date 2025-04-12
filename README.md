@@ -16,13 +16,29 @@ MYSQL_PORT: Porta que será mapeada do container para o host.
 
 ## Validação do parâmetro MYSQL_PORT:
 
-``` bash
 Uma etapa ("Validate Parameters") foi adicionada logo após o checkout, verificando se a porta é numérica e se está entre 1 e 65535.
+
+``` bash
+stage('Validate Parameters') {
+    steps {
+        script {
+            // Verifica se a porta é um número válido e está dentro do intervalo
+            try {
+                def portNum = params.MYSQL_PORT.toInteger()
+                if (portNum < 1 || portNum > 65535) {
+                    error "Invalid MySQL port: ${params.MYSQL_PORT}. It must be between 1 and 65535."
+                }
+            } catch (Exception e) {
+                error "MYSQL_PORT is not a valid number: ${params.MYSQL_PORT}"
+            }
+        }
+    }
+}
 ```
 
 ## Correção na substituição de senha no arquivo SQL:
 
-No comando sed, substituí o placeholder <PASSWORD> usando aspas duplas para que a variável do Jenkins (params.MYSQL_PASSWORD) seja corretamente interpolada.
+No comando sed, substituí o placeholder <PASSWORD> (que estava grafado errado no arquivo template e foi corrigido) usando aspas duplas para que a variável do Jenkins (params.MYSQL_PASSWORD) seja corretamente interpolada.
 
 ``` bash
     sh """
@@ -42,7 +58,8 @@ Ao usar aspas duplas para os comandos dentro de /bin/bash -c, garante-se que a s
 
 ## Espera ativa para inicialização do MySQL:
 
-O comando sleep de 3 segundos foi inserido para que o container esteja pronto para receber comandos SQL.
+O comando sleep de 3 segundos foi inserido para que o container esteja pronto para receber comandos SQL e 
+crio um loop para espera ativa.
 
 ``` bash
 
@@ -60,6 +77,8 @@ O comando sleep de 3 segundos foi inserido para que o container esteja pronto pa
 
 ## Spin up a container from the image built above, exposing the requested port on the Docker host:
 
+Feito assim:
+
 ``` bash
     sh """
     docker run -d --name ${containerName} --rm -e MYSQL_ROOT_PASSWORD=${params.MYSQL_PASSWORD} -p ${params.MYSQL_PORT}:3306 ${params.ENVIRONMENT_NAME}:latest
@@ -67,6 +86,9 @@ O comando sleep de 3 segundos foi inserido para que o container esteja pronto pa
 ```
 
 ## Prepare the environment by creating an account for the developer (username: developer, password: based on input parameter):
+
+Executo o comando sed com o placeholder corrigido no template:
+
 ``` bash
     sh """
     sed "s/<PASSWORD>/${params.MYSQL_PASSWORD}/g" pipelines/include/create_developer.template > pipelines/include/create_developer.sql
@@ -75,7 +97,9 @@ O comando sleep de 3 segundos foi inserido para que o container esteja pronto pa
 
 ## The pipeline fails randomly in Jenkins
 
-Crio uma espera com verificação ativa no MySQL:
+Correções:
+
+1) Crio uma espera com verificação ativa no MySQL:
 
 ``` bash
     sh """
@@ -86,7 +110,7 @@ Crio uma espera com verificação ativa no MySQL:
     """
 ```
 
-Checo se os comandos retornam erro e se for o caso, mostro a mensagem de erro:
+2) Checo se os comandos retornam erro e se for o caso, mostro a mensagem de erro:
 
 ``` bash
     def status = sh(script: 'docker build ...', returnStatus: true)
@@ -95,7 +119,7 @@ Checo se os comandos retornam erro e se for o caso, mostro a mensagem de erro:
     }
 ```
 
-Evito conflito de porta (porta em uso):
+3) Evito conflito de porta (porta em uso):
 
 ``` bash
     def portCheck = sh(script: "lsof -i :${params.MYSQL_PORT}", returnStatus: true)
@@ -106,7 +130,7 @@ Evito conflito de porta (porta em uso):
 
 ## If it works, developers are still not able to login into the running MySQL container because of an unknown issue. Please fix these issue before moving to the next part:
 
-Correção do Placeholder no script
+Correção do Placeholder no script:
 
 ``` bash
 CREATE USER IF NOT EXISTS 'developer'@'localhost' IDENTIFIED BY '<PASSWORD>';
