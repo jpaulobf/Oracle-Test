@@ -1,28 +1,28 @@
-# Correções:
+# Corrections:
 
 
 ## Developers can trigger the pipeline with parameters (Environment name, MySQL password and MySQL port):
 
-Aqui, os desenvolvedores poderão fornecer:
+Here, developers will be able to provide:
 
 ``` bash
 
-ENVIRONMENT_NAME: Nome do ambiente a ser usado para a imagem/container.
+ENVIRONMENT_NAME: Name of the environment to be used for the image/container.
 
-MYSQL_PASSWORD: Senha do usuário root do MySQL (gerenciada de forma segura).
+MYSQL_PASSWORD: Password of the MySQL root user (managed securely).
 
-MYSQL_PORT: Porta que será mapeada do container para o host.
+MYSQL_PORT: Port that will be mapped from the container to the host.
 ```
 
-## Validação do parâmetro MYSQL_PORT:
+## Validation of the MYSQL_PORT parameter:
 
-Uma etapa ("Validate Parameters") foi adicionada logo após o checkout, verificando se a porta é numérica e se está entre 1 e 65535.
+A step (“Validate Parameters”) has been added just after checkout, checking that the port is numeric and between 1 and 65535.
 
 ``` bash
 stage('Validate Parameters') {
     steps {
         script {
-            // Verifica se a porta é um número válido e está dentro do intervalo
+            // Checks that the port is a valid number and within the range
             try {
                 def portNum = params.MYSQL_PORT.toInteger()
                 if (portNum < 1 || portNum > 65535) {
@@ -36,9 +36,9 @@ stage('Validate Parameters') {
 }
 ```
 
-## Correção na substituição de senha no arquivo SQL:
+## Correction to password substitution in the SQL file:
 
-No comando sed, substituí o placeholder <PASSWORD> (que estava grafado errado no arquivo template e foi corrigido) usando aspas duplas para que a variável do Jenkins (params.MYSQL_PASSWORD) seja corretamente interpolada.
+In the sed command, I replaced the placeholder <PASSWORD> (which was spelled wrong in the template file and has been corrected) using double quotes so that the Jenkins variable (params.MYSQL_PASSWORD) is correctly interpolated.
 
 ``` bash
     sh """
@@ -46,9 +46,9 @@ No comando sed, substituí o placeholder <PASSWORD> (que estava grafado errado n
     """
 ```
 
-## Ajuste no comando docker exec:
+## Adjustment to the docker exec command:
 
-Ao usar aspas duplas para os comandos dentro de /bin/bash -c, garante-se que a senha seja passada corretamente.
+Using double quotes for the commands inside /bin/bash -c ensures that the password is passed correctly.
 
 ``` bash
     sh """
@@ -56,10 +56,10 @@ Ao usar aspas duplas para os comandos dentro de /bin/bash -c, garante-se que a s
     """
 ```
 
-## Espera ativa para inicialização do MySQL:
+## Active wait for MySQL initialization:
 
-O comando sleep de 3 segundos foi inserido para que o container esteja pronto para receber comandos SQL e 
-crio um loop para espera ativa.
+The 3-second sleep command has been inserted so that the container is ready to receive SQL commands and 
+creates a loop for active waiting.
 
 ``` bash
 
@@ -77,7 +77,7 @@ crio um loop para espera ativa.
 
 ## Spin up a container from the image built above, exposing the requested port on the Docker host:
 
-Feito assim:
+Done like this:
 
 ``` bash
     sh """
@@ -87,7 +87,7 @@ Feito assim:
 
 ## Prepare the environment by creating an account for the developer (username: developer, password: based on input parameter):
 
-Executo o comando sed com o placeholder corrigido no template:
+I run the sed command with the corrected placeholder in the template:
 
 ``` bash
     sh """
@@ -97,9 +97,9 @@ Executo o comando sed com o placeholder corrigido no template:
 
 ## The pipeline fails randomly in Jenkins
 
-Correções:
+Corrections:
 
-1) Crio uma espera com verificação ativa no MySQL:
+1) I create a standby with active verification in MySQL:
 
 ``` bash
     sh """
@@ -110,7 +110,7 @@ Correções:
     """
 ```
 
-2) Checo se os comandos retornam erro e se for o caso, mostro a mensagem de erro:
+2) I check if the commands return an error and if so, I show the error message:
 
 ``` bash
     def status = sh(script: 'docker build ...', returnStatus: true)
@@ -119,7 +119,7 @@ Correções:
     }
 ```
 
-3) Evito conflito de porta (porta em uso):
+3) I avoid port conflicts (port in use):
 
 ``` bash
     def portCheck = sh(script: "lsof -i :${params.MYSQL_PORT}", returnStatus: true)
@@ -130,7 +130,7 @@ Correções:
 
 ## If it works, developers are still not able to login into the running MySQL container because of an unknown issue. Please fix these issue before moving to the next part:
 
-Correção do Placeholder no script:
+Corrected the placeholder in the script:
 
 ``` bash
 CREATE USER IF NOT EXISTS 'developer'@'localhost' IDENTIFIED BY '<PASSWORD>';
