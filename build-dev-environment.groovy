@@ -18,9 +18,9 @@ pipeline {
         stage('Checkout GIT repository') {
             steps {
                 script {
-                    git branch: 'master',
-                        credentialsId: '21f01d09-06da9cc35103',
-                        url: 'git@mysecret-nonexistent-repo/jenkins.git'
+                    git branch: 'main',
+                        credentialsId: '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',
+                        url: 'https://github.com/jpaulobf/Oracle-Test.git'
                 }
             }
         }
@@ -50,7 +50,7 @@ pipeline {
                         sh """
                         sed "s/<PASSWORD>/${params.MYSQL_PASSWORD}/g" pipelines/include/create_developer.template > pipelines/include/create_developer.sql
                         """
-
+                        
                         def buildStatus = sh(script: "docker build pipelines/ -t ${params.ENVIRONMENT_NAME}:latest", returnStatus: true)
                         if (buildStatus != 0) {
                             error("Docker image build failed. Aborting pipeline.")
